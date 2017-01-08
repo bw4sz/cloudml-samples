@@ -1,0 +1,13 @@
+#!/bin/bash 
+#BootCloudML
+#start docker container, keep port open for tensorboard
+docker run -it -p "127.0.0.1:8080:8080" --entrypoint=/bin/bash gcr.io/cloud-datalab/datalab:local
+ 
+gcloud auth login
+gcloud config list
+
+git clone https://github.com/bw4sz/cloudml-samples.git
+
+cd cloudml-samples/flowers
+
+./Flowers.sh

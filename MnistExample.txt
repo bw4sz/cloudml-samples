@@ -1,0 +1,24 @@
+docker run -it -p "127.0.0.1:8080:8080" --entrypoint=/bin/bash gcr.io/cloud-datalab/datalab:local
+
+gcloud auth login
+#redo gcloud init?
+
+#MNIST example
+cd /root/google-cloud-ml/samples/mnist/deployable
+
+JOB_NAME=mnist_deployable_${USER}_$(date +%Y%m%d_%H%M%S)
+PROJECT_ID=$(gcloud beta config get-value core/project)
+TRAIN_BUCKET=gs://${PROJECT_ID}-ml
+TRAIN_PATH=${TRAIN_BUCKET}/${JOB_NAME}
+
+
+# Clear the output from any previous cloud run.
+gsutil rm -rf ${TRAIN_PATH}
+gcloud beta ml jobs submit training ${JOB_NAME} \
+  --package-path=trainer \
+  --module-name=trainer.task \
+  --staging-bucket="${TRAIN_BUCKET}" \
+  --region=us-central1 \
+  -- \
+  --train_dir="${TRAIN_PATH}/train" \
+  --model_dir="${TRAIN_PATH}/model"
