@@ -55,14 +55,12 @@ class Evaluator(object):
     with tf.Graph().as_default() as graph:
       self.tensors = self.model.build_eval_graph(self.eval_data_paths,
                                                  self.eval_batch_size)
+
       self.summary = tf.summary.merge_all()
+
       self.saver = tf.train.Saver()
 
-    # TODO(b/33420312): remove the if once 0.12 is fully rolled out to prod.
-    try:
-      self.summary_writer = tf.summary.FileWriter(self.output_path)
-    except AttributeError:
-      self.summary_writer = tf.train.SummaryWriter(self.output_path)
+    self.summary_writer = tf.summary.FileWriter(self.output_path)
     self.sv = tf.train.Supervisor(
         graph=graph,
         logdir=self.output_path,
@@ -115,7 +113,8 @@ class Evaluator(object):
         master='', start_standard_services=False) as session:
       self.sv.saver.restore(session, last_checkpoint)
 
-      with open(os.path.join(self.output_path, 'predictions.csv'), 'wb') as f:
+      with file_io.FileIO(os.path.join(self.output_path,
+                                       'predictions.csv'), 'w') as f:
         to_run = [self.tensors.keys] + self.tensors.predictions
         self.sv.start_queue_runners(session)
         last_log_progress = 0
@@ -128,9 +127,9 @@ class Evaluator(object):
           res = session.run(to_run)
           for element in range(len(res[0])):
             f.write('%s' % res[0][element])
-            for i in range(len(self.tensors.predictions)):
+            for prediction in res[1:]:
               f.write(',')
-              f.write(self.model.format_prediction_values(res[i + 1][element]))
+              f.write(str(prediction[element]))
             f.write('\n')
 
 
@@ -186,13 +185,11 @@ class Trainer(object):
         self.tensors = self.model.build_train_graph(self.args.train_data_paths,
                                                     self.args.batch_size)
 
-        # Add the variable initializer Op.
         init_op = tf.global_variables_initializer()
 
         # Create a saver for writing training checkpoints.
         self.saver = tf.train.Saver()
 
-        # Build the summary operation based on the TF collection of Summaries.
         self.summary_op = tf.summary.merge_all()
 
     # Create a "supervisor", which oversees the training process.
@@ -469,7 +466,7 @@ def write_predictions(args, model, cluster, task):
     raise ValueError('invalid task_type %s' % (task.type,))
 
   logging.info('Starting to write predictions on %s/%d', task.type, task.index)
-  evaluator = Evaluator(args, model)
+  evaluator = Evaluator(args, model, args.eval_data_paths)
   evaluator.write_predictions()
   logging.info('Done writing predictions on %s/%d', task.type, task.index)
 

@@ -12,6 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+################################################################################
+# This sample has been deprecated.
+################################################################################
+
+
 """Iris Classification Sample Cloud Runner.
 """
 import argparse
@@ -171,7 +177,7 @@ def preprocess(pipeline, training_data, eval_data, predict_data, output_dir):
 
 def get_train_parameters(trainer_uri, endpoint, metadata, trainer_job_args):
   return {
-      'package_uris': [trainer_uri],
+      'package_uris': [trainer_uri, ml.version.installed_sdk_location],
       'python_module': MODULE_NAME,
       'export_subdir': EXPORT_SUBDIRECTORY,
       'cloud_ml_endpoint': endpoint,
@@ -231,9 +237,8 @@ def evaluate(pipeline, output_dir, trained_model=None, eval_features=None):
 
   evaluations = (eval_features
                  | 'Evaluate' >> ml.Evaluate(trained_model)
-                 | beam.Map('CreateEvaluations',
-                            make_evaluation_dict,
-                            vocab_loader))
+                 | 'CreateEvaluations' >> beam.Map(
+                     make_evaluation_dict, vocab_loader))
   coder = io.CsvCoder(
       column_names=['key', 'target', 'predicted', 'score', 'target_label',
                     'predicted_label', 'all_scores'],
@@ -353,9 +358,9 @@ def model_analysis(pipeline, output_dir, evaluation_data=None, metadata=None):
 
 def get_pipeline_name(cloud):
   if cloud:
-    return 'BlockingDataflowPipelineRunner'
+    return 'DataflowRunner'
   else:
-    return  'DirectPipelineRunner'
+    return  'DirectRunner'
 
 def main(argv=None):
   """Run Preprocessing, Training, Eval, and Prediction as a single Dataflow."""
@@ -368,8 +373,8 @@ def main(argv=None):
   opts = None
   if args.cloud:
     options = {
-        'staging_location':
-            os.path.join(args.output_dir, 'tmp', 'staging'),
+        'staging_location': os.path.join(args.output_dir, 'tmp', 'staging'),
+        'temp_location': os.path.join(args.output_dir, 'tmp', 'staging'),
         'job_name': ('cloud-ml-sample-iris' + '-' +
                      datetime.datetime.now().strftime('%Y%m%d%H%M%S')),
         'project': args.project_id,
@@ -425,7 +430,7 @@ def main(argv=None):
     print 'Deploying %s version: %s' % (args.deploy_model_name,
                                         args.deploy_model_version)
 
-  p.run()
+  p.run().wait_until_finish()
 
   if args.cloud:
     print 'Deployed %s version: %s' % (args.deploy_model_name,
