@@ -285,7 +285,7 @@ class FlowersE2E(object):
         '--project', self.args.project,
     ]
 
-    print create_model_cmd
+    print(create_model_cmd)
     subprocess.check_call(create_model_cmd)
 
     submit = [
@@ -297,13 +297,13 @@ class FlowersE2E(object):
     ]
     if not model_path.startswith('gs://'):
       submit.extend(['--staging-bucket', self.args.gcs_bucket])
-    print submit
+    print(submit)
     subprocess.check_call(submit)
 
     self.adaptive_wait()
 
-    print 'Deployed %s version: %s' % (self.args.deploy_model_name,
-                                       self.args.deploy_model_version)
+    print('Deployed %s version: %s' % (self.args.deploy_model_name,
+                                       self.args.deploy_model_version))
 
   def adaptive_wait(self):
     """Waits for a model to be fully deployed.

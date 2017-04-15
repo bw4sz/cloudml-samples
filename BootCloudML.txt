@@ -1,6 +1,9 @@
 #!/bin/bash 
 #BootCloudML
 #start docker container, keep port open for tensorboard
+
+docker run -t -i --name gcloud-config google/cloud-sdk gcloud auth activate-service-account benweinstein2010@gmail.com --key-file /tmp/your-key.p12 --project api-project-773889352370
+
 docker run -it -p "127.0.0.1:8080:8080" --entrypoint=/bin/bash gcr.io/cloud-datalab/datalab:local
  
 gcloud auth login
