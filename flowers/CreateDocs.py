@@ -17,7 +17,7 @@ import argparse
 
 # Serice account credentials
 #needs to check where I am running, can I inheret from cloud instance?
-credentials = GoogleCredentials.get_application_default()
+#credentials = GoogleCredentials.get_application_default()
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "C:/Users/Ben/Dropbox/Google/MeerkatReader-9fbf10d1e30c.json"
 
 def process_args():
@@ -145,6 +145,6 @@ class Organizer:
         
 if __name__ == "__main__":
     args = process_args()
-    p=Organizer(positives=args.positives, negatives=args.negatives)
+    p=Organizer(positives=args.positives, negatives=args.negatives,testing=args.testing)
     p.divide_data(training_prop=args.prop)
     p.write_data()

@@ -6,9 +6,7 @@ cd cloudml-samples
 cd flowers
 
 #create training and testing documents
-python CreateDocs.py 
-    --positives gs://api-project-773889352370-ml/Hummingbirds/Positives/ 
-    --negatives gs://api-project-773889352370-ml/Hummingbirds/Negatives/
+python CreateDocs.py --positives gs://api-project-773889352370-ml/Hummingbirds/Positives/ --negatives gs://api-project-773889352370-ml/Hummingbirds/Negatives/
 
 declare -r USER="Ben"
 declare -r PROJECT=$(gcloud config list project --format "value(core.project)")
@@ -19,7 +17,7 @@ declare -r MODEL_NAME=flowers
 declare -r VERSION_NAME=v1
 
 #eval set size
-set_size = gsutil ls gs://api-project-773889352370-ml/Hummingbirds/dict.txt  | wc -l
+setsize=gsutil ls gs://api-project-773889352370-ml/Hummingbirds/dict.txt  | wc -l
 
 python pipeline.py --project ${PROJECT} 
     --cloud 
