@@ -76,6 +76,10 @@ def process_args():
       default=50,
       help='The size of the eval dataset.')
   parser.add_argument(
+      '--label_count',
+      default=2,
+      help='The number of labels in the class')  
+  parser.add_argument(
       '--input_dict',
       default=None,
       help='Input dictionary. Specified as text file uri. '

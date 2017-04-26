@@ -76,9 +76,9 @@ def build_signature(inputs, outputs):
 def create_model():
   """Factory method that creates model to be used by generic task.py."""
   parser = argparse.ArgumentParser()
-  # Label count needs to correspond to nubmer of labels in dictionary used
+  # Label count needs to correspond to number of labels in dictionary used
   # during preprocessing.
-  parser.add_argument('--label_count', type=int, default=5)
+  parser.add_argument('--label_count', type=int, default=2)
   parser.add_argument('--dropout', type=float, default=0.5)
   parser.add_argument(
       '--inception_checkpoint_file',
