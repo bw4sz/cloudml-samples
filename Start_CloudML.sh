@@ -13,18 +13,17 @@ gcloud alpha compute instances create-from-container cloudml
     --metadata-from-file startup-script=StartDocker.sh
     --boot-disk-size "50"
 
+#I'm finding that pretty buggy, just go direct   
+gcloud compute instances create cloudml 
+    --image-family gci-stable 
+    --image-project google-containers 
+    --boot-disk-size "40"
+
 #get startup script info
 gcloud compute instances get-serial-port-output cloudml
 
 #for the moment, ssh instance
 gcloud compute ssh cloudml
-  
-git clone https://github.com/bw4sz/cloudml-samples.git
-cd cloudml-samples
-cd flowers
-
-#run test env
-./pipeline.sh
-    
+      
 #kill instance when you are done.
 gcloud compute instances delete cloudml
