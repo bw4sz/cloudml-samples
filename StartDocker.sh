@@ -6,7 +6,7 @@ cd cloudml-samples
 cd flowers
 
 #create training and testing documents
-python CreateDocs.py --positives gs://api-project-773889352370-ml/Hummingbirds/Positives/ --negatives gs://api-project-773889352370-ml/Hummingbirds/Negatives/ --training
+python3 CreateDocs.py --positives gs://api-project-773889352370-ml/Hummingbirds/Positives/ --negatives gs://api-project-773889352370-ml/Hummingbirds/Negatives/ --training
 
 declare -r USER="Ben"
 declare -r PROJECT=$(gcloud config list project --format "value(core.project)")
@@ -28,5 +28,5 @@ python pipeline.py \
     --output_dir "${GCS_PATH}/training" \
     --sample_image_uri  gs://api-project-773889352370-ml/Hummingbirds/Positives/10000.jpg  
 
- exit
+exit
 
