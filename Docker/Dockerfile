@@ -39,7 +39,7 @@ RUN cd ~/ &&\
 RUN apt-get -y install python-tk
 
 #Apache beam for cloud data flow
-RUN pip install apache_beam Pillow google-apitools
+RUN pip install apache_beam Pillow google-apitools google-cloud
 
 #install gcsfuse
 RUN apt-get install curl

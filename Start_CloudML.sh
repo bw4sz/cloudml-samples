@@ -6,24 +6,26 @@
 #docker run --rm -it --volumes-from gcloud-config gcr.io/api-project-773889352370/cloudmlengine
 
 # #Create a cloudml a Google Compute Engine Environment
-# gcloud alpha compute instances create-from-container cloudml 
-    # --docker-image=gcr.io/api-project-773889352370/cloudmlengine 
+ gcloud alpha compute instances create-from-container cloudml 
+    --docker-image=gcr.io/api-project-773889352370/cloudmlengine 
+    --boot-disk-size "50"
+    --service-account "773889352370-compute@developer.gserviceaccount.com"
     # --run-as-privileged
     # --service-account 773889352370-compute@developer.gserviceaccount.com
     # --metadata-from-file startup-script=StartDocker.sh
-    # --boot-disk-size "50"
 
 #get startup script info
 #gcloud compute instances get-serial-port-output cloudml
 
 #I'm finding that pretty buggy, just go direct   
-gcloud compute instances create cloudml 
-    --image-family gci-stable 
-    --image-project google-containers 
+gcloud compute instances create cloudml
+    --image container-vm
     --boot-disk-size "40"
-
+    --service-account "773889352370-compute@developer.gserviceaccount.com"
+    --scopes "https://www.googleapis.com/auth/cloud-platform" 
+    
 #for the moment, ssh instance
-gcloud compute ssh cloudml
+gcloud compute ssh cloudml 
       
 #run pipeline
 ./StartDocker.sh

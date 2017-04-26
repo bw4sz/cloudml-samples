@@ -17,18 +17,33 @@ declare -r MODEL_NAME=flowers
 declare -r VERSION_NAME=v1
 
 #eval set size
-setsize=gsutil ls gs://api-project-773889352370-ml/Hummingbirds/dict.txt  | wc -l
+gsutil cp gs://api-project-773889352370-ml/Hummingbirds/testingdata.csv  .
+a=($(wc testingdata.csv))
+setsize=${a[0]} 
 
-python pipeline.py --project ${PROJECT} 
-    --cloud 
-    --train_input_path gs://api-project-773889352370-ml/Hummingbirds/trainingdata.csv 
-    --eval_input_path gs://api-project-773889352370-ml/Hummingbirds/testingdata.csv 
-    --eval_set_size ${set_size}
-    --input_dict gs://api-project-773889352370-ml/Hummingbirds/dict.txt  
-    --deploy_model_name DeepMeerkat 
-    --gcs_bukect ${BUCKET} 
-    --output_dir ${GCS_PATH}
-    --sample_image_uri  gs://api-project-773889352370-ml/Hummingbirds/Positives/10000.jpg
-    
-exit
+#from scratch
+python pipeline.py \
+    --project ${PROJECT} \
+    --cloud \
+    --train_input_path gs://api-project-773889352370-ml/Hummingbirds/trainingdata.csv \
+    --eval_input_path gs://api-project-773889352370-ml/Hummingbirds/testingdata.csv \
+    --input_dict gs://api-project-773889352370-ml/Hummingbirds/dict.txt \
+    --deploy_model_name DeepMeerkat \
+    --gcs_bucket ${BUCKET} \
+    --output_dir ${GCS_PATH} \
+    --sample_image_uri  gs://api-project-773889352370-ml/Hummingbirds/Positives/10000.jpg  
+
+#from preprocessed
+python pipeline.py \
+--project ${PROJECT} \
+--cloud \
+--preprocessed_train_set gs://api-project-773889352370-ml/Ben/flowers_Ben_20170426_174124/preprocessed/train* \
+--preprocessed_eval_set gs://api-project-773889352370-ml/Ben/flowers_Ben_20170426_174124/preprocessed/eval* \
+--input_dict gs://api-project-773889352370-ml/Hummingbirds/dict.txt \
+--deploy_model_name "DeepMeerkat" \
+--gcs_bucket ${BUCKET} \
+--output_dir ${GCS_PATH} \
+--sample_image_uri  gs://api-project-773889352370-ml/Hummingbirds/Positives/10000.jpg  
+
+    exit
 
