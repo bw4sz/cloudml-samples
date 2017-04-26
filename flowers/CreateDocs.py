@@ -26,7 +26,7 @@ def process_args():
     parser = argparse.ArgumentParser(description='Runs Flowers Sample E2E pipeline.')
     parser.add_argument('--positives', help='Google cloud storage path for positive samples.')
     parser.add_argument('--negatives', help='Google cloud storage path for positive samples.')
-    parser.add_argument('--prop', help='Proportion of training and testing data',default=0.8,type=float)    
+    parser.add_argument('--prop', help='Proportion of training and testing data',default=0.9,type=float)    
     parser.add_argument('--testing', help='Testing dataset, only write a small portion to reduce run time',action="store_true")    
     
     args, _ = parser.parse_known_args()
