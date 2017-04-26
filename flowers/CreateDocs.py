@@ -16,9 +16,11 @@ import tempfile
 import argparse
 
 # Serice account credentials
-#needs to check where I am running, can I inheret from cloud instance?
-#credentials = GoogleCredentials.get_application_default()
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "C:/Users/Ben/Dropbox/Google/MeerkatReader-9fbf10d1e30c.json"
+#needs to check where I am running, if on google cloud, can get credentials directly.
+try:
+    credentials = GoogleCredentials.get_application_default()
+except:
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "C:/Users/Ben/Dropbox/Google/MeerkatReader-9fbf10d1e30c.json"
 
 def process_args():
     parser = argparse.ArgumentParser(description='Runs Flowers Sample E2E pipeline.')
@@ -135,7 +137,7 @@ class Organizer:
         #write dict file 
         handle, fn = tempfile.mkstemp(suffix='.txt')        
         with open(handle,"w",newline="") as f:
-            f.write("positive")
+            f.write("positive"+"\n")
             f.write("negative")
             f.close()
         
