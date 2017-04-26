@@ -15,8 +15,9 @@ import csv
 import tempfile
 import argparse
 
-
 # Serice account credentials
+#needs to check where I am running, can I inheret from cloud instance?
+credentials = GoogleCredentials.get_application_default()
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "C:/Users/Ben/Dropbox/Google/MeerkatReader-9fbf10d1e30c.json"
 
 def process_args():
@@ -24,12 +25,17 @@ def process_args():
     parser.add_argument('--positives', help='Google cloud storage path for positive samples.')
     parser.add_argument('--negatives', help='Google cloud storage path for positive samples.')
     parser.add_argument('--prop', help='Proportion of training and testing data',default=0.8,type=float)    
+    parser.add_argument('--testing', help='Testing dataset, only write a small portion to reduce run time',action="store_true")    
+    
     args, _ = parser.parse_known_args()
     return args    
 
 class Organizer:
-    def __init__(self,positives,negatives):
-
+    def __init__(self,positives,negatives,testing):
+        
+        #set testing switch
+        self.testing=testing
+        
         credentials = GoogleCredentials.get_application_default()
         """Downloads a blob from the bucket."""
         storage_client = storage.Client()
@@ -89,6 +95,13 @@ class Organizer:
         self.negatives_training=negatives_random[:int(len(negatives_random)*training_prop)]
         self.negatives_testing=negatives_random[int(len(negatives_random)*training_prop):]
         
+        #testing, only write a tiny dataset
+        if self.testing:
+            self.positives_training=self.positives_training[0:50]
+            self.positives_testing=self.positives_testing[0:10]
+            self.negatives_training=self.negatives_training[0:50]
+            self.negatives_testing=self.negatives_training[0:10]
+            
     def write_data(self):
         
         #Write to temp then send to google cloud
