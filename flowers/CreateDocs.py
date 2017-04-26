@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 '''
 Create documents for training a tensorflow model training dataset on google cloud machine learning engine.
 This script is built for a two class training dataset, images with desired objects (positives) and images with ignored objects (negatives)
@@ -12,7 +14,6 @@ import random
 import csv
 import tempfile
 import argparse
-from __future__ import absolute_import
 
 
 # Serice account credentials
