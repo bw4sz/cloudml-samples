@@ -30,6 +30,7 @@ python pipeline.py --project ${PROJECT}
     --deploy_model_name DeepMeerkat 
     --gcs_bukect ${BUCKET} 
     --output_dir ${GCS_PATH}
+    --sample_image_uri  gs://api-project-773889352370-ml/Hummingbirds/Positives/10000.jpg
     
 exit
 
