@@ -22,7 +22,7 @@ Example usage:
 
 import argparse
 import base64
-from cStringIO import StringIO
+from io import StringIO
 import json
 import sys
 
@@ -89,7 +89,7 @@ def make_request_json(input_images, output_json, do_resize):
       ff.write(row)
       ff.write('\n')
 
-  print 'Wrote {} images to {}'.format(len(input_images), output_json)
+  print('Wrote {} images to {}'.format(len(input_images), output_json))
 
 
 def main():

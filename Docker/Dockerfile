@@ -41,6 +41,9 @@ RUN apt-get -y install python-tk
 #Apache beam for cloud data flow
 RUN pip install apache_beam Pillow google-apitools google-cloud
 
+#Cloud dataflow for python3 as well, a bit wasteful
+RUN pip3 install google-cloud
+
 #install gcsfuse
 RUN apt-get install curl
 RUN export GCSFUSE_REPO=gcsfuse-jessie && echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list &&\ 
