@@ -36,7 +36,6 @@ def make_standard_sql(table_name,
     The standard SQL query to pull the features from the given reddit table.
   """
 
-  # TODO(b/35648623): Simplify the SQL statement by removing the COALESCE parts.
   infer_mode = (mode == tf.contrib.learn.ModeKeys.INFER)
   return """
 SELECT
@@ -159,7 +158,7 @@ def make_preprocessing_fn(frequency_threshold):
         inputs['subreddit'], frequency_threshold=frequency_threshold)
 
     for name in ('author', 'comment_body', 'comment_parent_body'):
-      words = tft.map(tf.string_split, inputs[name])
+      words = tf.string_split(inputs[name])
       # TODO(b/33467613) Translate these to bag-of-words style sparse features.
       result[name + '_bow'] = tft.string_to_int(
           words, frequency_threshold=frequency_threshold)

@@ -22,7 +22,7 @@ The [Census Income Data
 Set](https://archive.ics.uci.edu/ml/datasets/Census+Income) that this sample
 uses for training is hosted by the [UC Irvine Machine Learning
 Repository](https://archive.ics.uci.edu/ml/datasets/). We have hosted the data
-on Google Cloud Storage:
+on Google Cloud Storage in a slightly cleaned form:
 
  * Training file is `adult.data.csv`
  * Evaluation file is `adult.test.csv`
@@ -31,23 +31,26 @@ on Google Cloud Storage:
 The source of this dataset is from a third party. Google provides no representation,
 warranty, or other guarantees about the validity or any other aspects of this dataset.
 
-### Run Exports
+### Set Environment Variables
 Please run the export and copy statements first:
 
 ```
-TRAIN_GCS_FILE=gs://cloudml-public/census/data/adult.data.csv
-EVAL_GCS_FILE=gs://cloudml-public/census/data/adult.test.csv
+TRAIN_FILE=gs://cloudml-public/census/data/adult.data.csv
+EVAL_FILE=gs://cloudml-public/census/data/adult.test.csv
 ```
+
+### \*Optional\* Use local training files.
 
 Since TensorFlow - not the Cloud ML Engine - handles reading from GCS, you can run all commands below using these environment variables. However, if your network is slow or unreliable, you may want to download the files for local training.
 
 ```
 mkdir census_data
+
+gsutil cp $TRAIN_FILE census_data/adult.data.csv
+gsutil cp $EVAL_FILE census_data/adult.test.csv
+
 TRAIN_FILE=census_data/adult.data.csv
 EVAL_FILE=census_data/adult.test.csv
-
-gsutil cp $TRAIN_GCS_FILE $TRAIN_FILE
-gsutil cp $EVAL_GCS_FILE $EVAL_FILE
 ```
 
 
@@ -66,11 +69,9 @@ There are two options for the virtual environments:
 
 
 ## Install dependencies
-Install the following dependencies:
- * Install [Cloud SDK](https://cloud.google.com/sdk/)
- * Install [TensorFlow](https://www.tensorflow.org/install/)
- * Install [gcloud](https://cloud.google.com/sdk/gcloud/)
 
+ * Install [gcloud](https://cloud.google.com/sdk/gcloud/)
+ * Install the python dependencies. `pip install --upgrade -r requirements.txt`
 
 # Single Node Training
 Single node training runs TensorFlow code on a single instance. You can run the exact
@@ -93,7 +94,8 @@ rm -rf $OUTPUT_DIR
 python trainer/task.py --train-files $TRAIN_FILE \
                        --eval-files $EVAL_FILE \
                        --job-dir $OUTPUT_DIR \
-                       --train-steps $TRAIN_STEPS
+                       --train-steps $TRAIN_STEPS \
+                       --eval-steps 100
 ```
 
 ### Using gcloud local
@@ -113,10 +115,15 @@ gcloud ml-engine local train --package-path trainer \
                            --train-files $TRAIN_FILE \
                            --eval-files $EVAL_FILE \
                            --job-dir $OUTPUT_DIR \
-                           --train-steps $TRAIN_STEPS
+                           --train-steps $TRAIN_STEPS \
+                           --eval-steps 100
 ```
 
 ### Using Cloud ML Engine
+*NOTE* If you used downloaded the training files to your local file system, be sure
+to reset the `TRAIN_FILE` and `EVAL_FILE` environment variables to refer to a GCS location.
+Data must be in GCS for cloud-based training.
+
 Run the code on Cloud ML Engine using `gcloud`. Note how `--job-dir` comes
 before `--` while training on the cloud and this is so that we can have
 different trial runs during Hyperparameter tuning.
@@ -130,15 +137,17 @@ export TRAIN_STEPS=1000
 ```
 gcloud ml-engine jobs submit training $JOB_NAME \
                                     --stream-logs \
-                                    --runtime-version 1.0 \
+                                    --runtime-version 1.2 \
                                     --job-dir $GCS_JOB_DIR \
                                     --module-name trainer.task \
                                     --package-path trainer/ \
                                     --region us-central1 \
                                     -- \
-                                    --train-files $TRAIN_GCS_FILE \
-                                    --eval-files $EVAL_GCS_FILE \
-                                    --train-steps $TRAIN_STEPS
+                                    --train-files $TRAIN_FILE \
+                                    --eval-files $EVAL_FILE \
+                                    --train-steps $TRAIN_STEPS \
+                                    --eval-steps 100
+
 ```
 
 ## Tensorboard
@@ -165,9 +174,6 @@ Run the distributed training code locally using `gcloud`.
 
 ```
 export TRAIN_STEPS=1000
-export PS_SERVER_COUNT=2
-export WORKER_COUNT=3
-export TRAIN_STEPS=500
 export OUTPUT_DIR=census_output
 rm -rf $OUTPUT_DIR
 ```
@@ -175,14 +181,14 @@ rm -rf $OUTPUT_DIR
 ```
 gcloud ml-engine local train --package-path trainer \
                            --module-name trainer.task \
-                           --parameter-server-count $PS_SERVER_COUNT \
-                           --worker-count $WORKER_COUNT \
                            --distributed \
                            -- \
                            --train-files $TRAIN_FILE \
                            --eval-files $EVAL_FILE \
                            --train-steps $TRAIN_STEPS \
-                           --job-dir $OUTPUT_DIR
+                           --job-dir $OUTPUT_DIR \
+                           --eval-steps 100
+
 ```
 
 ### Using Cloud ML Engine
@@ -205,9 +211,10 @@ gcloud ml-engine jobs submit training $JOB_NAME \
                                     --package-path trainer/ \
                                     --region us-central1 \
                                     -- \
-                                    --train-files $TRAIN_GCS_FILE \
-                                    --eval-files $EVAL_GCS_FILE \
-                                    --train-steps $TRAIN_STEPS
+                                    --train-files $TRAIN_FILE \
+                                    --eval-files $EVAL_FILE \
+                                    --train-steps $TRAIN_STEPS \
+                                    --eval-steps 100
 ```
 
 # Hyperparameter Tuning
@@ -230,16 +237,18 @@ export TRAIN_STEPS=1000
 gcloud ml-engine jobs submit training $JOB_NAME \
                                     --stream-logs \
                                     --scale-tier $SCALE_TIER \
-                                    --runtime-version 1.0 \
+                                    --runtime-version 1.2 \
                                     --config $HPTUNING_CONFIG \
                                     --job-dir $GCS_JOB_DIR \
                                     --module-name trainer.task \
                                     --package-path trainer/ \
                                     --region us-central1 \
                                     -- \
-                                    --train-files $TRAIN_GCS_FILE \
-                                    --eval-files $EVAL_GCS_FILE \
-                                    --train-steps $TRAIN_STEPS
+                                    --train-files $TRAIN_FILE \
+                                    --eval-files $EVAL_FILE \
+                                    --train-steps $TRAIN_STEPS \
+                                    --eval-steps 100
+
 ```
 
 You can run the Tensorboard command to see the results of different runs and
@@ -277,9 +286,15 @@ gsutil ls -r $GCS_JOB_DIR/export
  export MODEL_BINARIES=$GCS_JOB_DIR/export/JSON/
  ```
 
+```
+gcloud ml-engine versions create v1 --model census --origin $MODEL_BINARIES --runtime-version 1.2
+```
+
+### (Optional) Inspect the model binaries with the SavedModel CLI
+From version 1.2, TensorFlow ships with a CLI that allows you to inspect the signature of exported binary files. To do this run:
 
 ```
-gcloud ml-engine versions create v1 --model census --origin $MODEL_BINARIES --runtime-version 1.0
+saved_model_cli show --dir $MODEL_BINARIES --tag serve --signature_def prediction
 ```
 
 ### Run Online Predictions
@@ -306,6 +321,7 @@ gcloud ml-engine jobs submit prediction $JOB_NAME \
     --version v1 \
     --data-format TEXT \
     --region us-central1 \
+    --runtime-version 1.2 \
     --input-paths gs://cloudml-public/testdata/prediction/census.json \
     --output-path $GCS_JOB_DIR/predictions
 ```

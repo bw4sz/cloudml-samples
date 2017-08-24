@@ -62,7 +62,7 @@ def parse_arguments(argv):
   parser.add_argument(
       '--frequency_threshold',
       type=int,
-      default=100,
+      default=15,
       help='The frequency threshold below which categorical values are '
       'ignored.')
   parser.add_argument(
@@ -77,10 +77,14 @@ def parse_arguments(argv):
       '--predict_data', help='Data to encode as prediction features.')
   parser.add_argument(
       '--output_dir',
-      default=None,
       required=True,
       help=('Google Cloud Storage or Local directory in which '
             'to place outputs.'))
+  parser.add_argument(
+      '--delimiter',
+      default='\t',
+      type=str,
+      help='Delimiter used to parse the input CSV files.')
   args, _ = parser.parse_known_args(args=argv[1:])
 
   if args.cloud and not args.project_id:
@@ -89,8 +93,7 @@ def parse_arguments(argv):
   return args
 
 
-# TODO(b/33688220) should the transform functions take shuffle as an optional
-# argument instead?
+# TODO: Perhaps use Reshuffle (https://issues.apache.org/jira/browse/BEAM-1872)?
 @beam.ptransform_fn
 def _Shuffle(pcoll):  # pylint: disable=invalid-name
   return (pcoll
@@ -100,7 +103,7 @@ def _Shuffle(pcoll):  # pylint: disable=invalid-name
 
 
 def preprocess(pipeline, training_data, eval_data, predict_data, output_dir,
-               frequency_threshold):
+               frequency_threshold, delimiter):
   """Run pre-processing step as a pipeline.
 
   Args:
@@ -110,6 +113,7 @@ def preprocess(pipeline, training_data, eval_data, predict_data, output_dir,
     predict_data: file paths to input csv files.
     output_dir: file path to where to write all the output files.
     frequency_threshold: frequency threshold to use for categorical values.
+    delimiter: the column delimiter for the CSV format.
   """
   # 1) The schema can be either defined in-memory or read from a configuration
   #    file, in this case we are creating the schema in-memory.
@@ -118,7 +122,7 @@ def preprocess(pipeline, training_data, eval_data, predict_data, output_dir,
   # 2) Configure the coder to map the source file column names to a dictionary
   #    of key -> tensor_proto with the appropiate type derived from the
   #    input_schema.
-  coder = criteo.make_tsv_coder(input_schema)
+  coder = criteo.make_csv_coder(input_schema, delimiter)
 
   # 3) Read from text using the coder.
   train_data = (
@@ -138,10 +142,8 @@ def preprocess(pipeline, training_data, eval_data, predict_data, output_dir,
            pipeline=pipeline))
 
   preprocessing_fn = criteo.make_preprocessing_fn(frequency_threshold)
-  (train_dataset, train_metadata), transform_fn = (
-      (train_data, input_metadata)
-      | 'AnalyzeAndTransform' >> tft.AnalyzeAndTransformDataset(
-          preprocessing_fn))
+  transform_fn = ((train_data, input_metadata)
+                  | 'Analyze' >> tft.AnalyzeDataset(preprocessing_fn))
 
   # WriteTransformFn writes transform_fn and metadata to fixed subdirectories
   # of output_dir, which are given by path_constants.TRANSFORM_FN_DIR and
@@ -149,41 +151,34 @@ def preprocess(pipeline, training_data, eval_data, predict_data, output_dir,
   _ = (transform_fn
        | 'WriteTransformFn' >> tft_beam_io.WriteTransformFn(output_dir))
 
-  # TODO(b/34231369) Remember to eventually also save the statistics.
+  @beam.ptransform_fn
+  def TransformAndWrite(pcoll, path):  # pylint: disable=invalid-name
+    pcoll |= 'Shuffle' >> _Shuffle()  # pylint: disable=no-value-for-parameter
+    (dataset, metadata) = (((pcoll, input_metadata), transform_fn)
+                           | 'Transform' >> tft.TransformDataset())
+    coder = coders.ExampleProtoCoder(metadata.schema)
+    _ = (dataset
+         | 'SerializeExamples' >> beam.Map(coder.encode)
+         | 'WriteExamples' >> beam.io.WriteToTFRecord(
+             os.path.join(output_dir, path), file_name_suffix='.tfrecord.gz'))
 
-  (evaluate_dataset, evaluate_metadata) = (
-      ((evaluate_data, input_metadata), transform_fn)
-      | 'TransformEval' >> tft.TransformDataset())
+  _ = train_data | 'TransformAndWriteTraining' >> TransformAndWrite(  # pylint: disable=no-value-for-parameter
+      path_constants.TRANSFORMED_TRAIN_DATA_FILE_PREFIX)
 
-  train_coder = coders.ExampleProtoCoder(train_metadata.schema)
-  _ = (train_dataset
-       | 'SerializeTrainExamples' >> beam.Map(train_coder.encode)
-       | 'ShuffleTraining' >> _Shuffle()  # pylint: disable=no-value-for-parameter
-       | 'WriteTraining'
-       >> beam.io.WriteToTFRecord(
-           os.path.join(output_dir,
-                        path_constants.TRANSFORMED_TRAIN_DATA_FILE_PREFIX),
-           file_name_suffix='.tfrecord.gz'))
+  _ = evaluate_data | 'TransformAndWriteEval' >> TransformAndWrite(  # pylint: disable=no-value-for-parameter
+      path_constants.TRANSFORMED_EVAL_DATA_FILE_PREFIX)
 
-  evaluate_coder = coders.ExampleProtoCoder(evaluate_metadata.schema)
-  _ = (evaluate_dataset
-       | 'SerializeEvalExamples' >> beam.Map(evaluate_coder.encode)
-       | 'ShuffleEval' >> _Shuffle()  # pylint: disable=no-value-for-parameter
-       | 'WriteEval'
-       >> beam.io.WriteToTFRecord(
-           os.path.join(output_dir,
-                        path_constants.TRANSFORMED_EVAL_DATA_FILE_PREFIX),
-           file_name_suffix='.tfrecord.gz'))
+  # TODO(b/35300113) Remember to eventually also save the statistics.
 
   if predict_data:
     predict_mode = tf.contrib.learn.ModeKeys.INFER
     predict_schema = criteo.make_input_schema(mode=predict_mode)
-    tsv_coder = criteo.make_tsv_coder(predict_schema, mode=predict_mode)
+    csv_coder = criteo.make_csv_coder(predict_schema, mode=predict_mode)
     predict_coder = coders.ExampleProtoCoder(predict_schema)
     serialized_examples = (
         pipeline
         | 'ReadPredictData' >> beam.io.ReadFromText(predict_data)
-        | 'ParsePredictCsv' >> beam.Map(tsv_coder.decode)
+        | 'ParsePredictCsv' >> beam.Map(csv_coder.decode)
         # TODO(b/35194257) Obviate the need for this explicit serialization.
         | 'EncodePredictData' >> beam.Map(predict_coder.encode))
     _ = (serialized_examples
@@ -239,7 +234,8 @@ def main(argv=None):
           eval_data=args.eval_data,
           predict_data=args.predict_data,
           output_dir=args.output_dir,
-          frequency_threshold=args.frequency_threshold)
+          frequency_threshold=args.frequency_threshold,
+          delimiter=args.delimiter)
 
 
 if __name__ == '__main__':
